@@ -6,17 +6,7 @@ from pprint import pprint
 kyccontract = initContract()
 
 
-def createkycReport():
-    first_name = input("First Name: ")
-    last_name = input("Last Name: ")
-    dob = input("Date of birth mm/dd/yyyy: ")
-    email = input("Email: ")
-    nationality = input("Nationality: ")
-    occupation = input("Occupation: ")
-    annual_income =input("Annual Income:  ")
-    user_id = input("User ID: ")
-    image = input("Driv Lic image_uri:  ")
-    
+def createkycReport(first_name, last_name, dob, email, nationality, occupation, annual_income, user_id, image="none"):
     json_data = convertDataToJSON(first_name, last_name, dob, email, nationality, occupation, annual_income, image)
     report_uri = pinJSONtoIPFS(json_data)
 
@@ -27,14 +17,14 @@ def kycreport(user_id, report_uri):
     tx_hash = kyccontract.functions.registerKYC(user_id, report_uri).transact(
         {"from": user_id}
     )
-    receipt = w3.eth.waitForTransactionReceipt(tx_hash)
+    receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
     return receipt
 
 def kycupdate(user_id, report_uri):
     tx_hash = kyccontract.functions.updateKYC(user_id, report_uri).transact(
         {"from": user_id}
     )
-    receipt = w3.eth.waitForTransactionReceipt(tx_hash)
+    receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
     return receipt
 
 
@@ -67,4 +57,5 @@ def main():
 
 
 
-main()
+if __name__ == "__main__":
+    main()

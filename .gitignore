@@ -1,0 +1,17 @@
+# Node / React
+node_modules/
+/form-react/node_modules/
+build/
+dist/
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+env/
+.env
+
+# Misc
+.ipynb_checkpoints/
