@@ -1,0 +1,5 @@
+UI improvements — Make the registration form look more polished and modern.
+Update KYC feature — Build out the frontend and backend API endpoint for updating an existing user's KYC data.
+Check KYC validity — Add a UI page where you can enter a wallet address and check if their KYC report is still valid (using the checkvalidity smart contract function).
+View KYC Report — Add a way to look up and display a user's IPFS report from the blockchain.
+Something else — Just let me know!

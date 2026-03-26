@@ -38,7 +38,7 @@ contract KYC {
         // Permanently associates the report_uri with the userID  on-chain via Events.
         emit NewClient(userID, report_uri);
        
-        Clientdatabase[userID] = Client(userID, report_uri, true, now + 365 days);
+        Clientdatabase[userID] = Client(userID, report_uri, true, now + 5 minutes);
         appendclientinfo(userID);
        
        return Clientdatabase[userID].used;

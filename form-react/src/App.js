@@ -1,11 +1,54 @@
 
+import { useState } from 'react';
 import './App.css';
-import Form from './comp/form.js'
+import Form from './comp/form.js';
+import UpdateForm from './comp/UpdateForm.js';
+import CheckValidity from './comp/CheckValidity.js';
+
 function App() {
+  const [activeTab, setActiveTab] = useState('register');
+
   return (
     <div className="App">
-      
-      <Form/>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        gap: '10px',
+        padding: '20px 0 0 0',
+        position: 'relative',
+        zIndex: 1
+      }}>
+        <button
+          onClick={() => setActiveTab('register')}
+          style={{
+            padding: '10px 30px',
+            fontSize: '16px',
+            fontWeight: 'bold',
+            cursor: 'pointer',
+            borderRadius: '8px 8px 0 0',
+            border: 'none',
+            backgroundColor: activeTab === 'register' ? '#3E6F80' : '#a0bec8',
+            color: 'white'
+          }}>
+          Register KYC
+        </button>
+        <button
+          onClick={() => setActiveTab('update')}
+          style={{
+            padding: '10px 30px',
+            fontSize: '16px',
+            fontWeight: 'bold',
+            cursor: 'pointer',
+            borderRadius: '8px 8px 0 0',
+            border: 'none',
+            backgroundColor: activeTab === 'update' ? '#3E6F80' : '#a0bec8',
+            color: 'white'
+          }}>
+          Update KYC
+        </button>
+      </div>
+
+      {activeTab === 'register' ? <Form /> : <UpdateForm />}
     </div>
   );
 }
