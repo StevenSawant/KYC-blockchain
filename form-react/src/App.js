@@ -46,9 +46,25 @@ function App() {
           }}>
           Update KYC
         </button>
+        <button
+          onClick={() => setActiveTab('check')}
+          style={{
+            padding: '10px 30px',
+            fontSize: '16px',
+            fontWeight: 'bold',
+            cursor: 'pointer',
+            borderRadius: '8px 8px 0 0',
+            border: 'none',
+            backgroundColor: activeTab === 'check' ? '#3E6F80' : '#a0bec8',
+            color: 'white'
+          }}>
+          Check Validity
+        </button>
       </div>
 
-      {activeTab === 'register' ? <Form /> : <UpdateForm />}
+      {activeTab === 'register' && <Form />}
+      {activeTab === 'update' && <UpdateForm />}
+      {activeTab === 'check' && <CheckValidity />}
     </div>
   );
 }

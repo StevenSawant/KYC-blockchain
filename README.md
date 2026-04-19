@@ -6,154 +6,134 @@
 
 ## Introduction
 
-The objective of this project is to explore the possibilities of integrating blockchain into Anti-Money Laundering(AML) practices. We have used Solidity to create a smart contract to input and update information on the blockchain for the purpose of streamlining the Know Your Customer (KYC) process.
+The objective of this project is to explore the integration of blockchain technology into Anti-Money Laundering (AML) and Know Your Customer (KYC) practices. By using Solidity smart contracts, a Python Flask backend, and a React frontend, we have created a streamlined, web-based utility for secure, cross-institution identity verification.
 
-AML refers to the global laws, regulations, and procedures that are in place to prevent the act of producing income through illegal activities. The issue with the current AML procedures are that they are not able to keep pace with the evolving complexity and volume of financial transactions which becomes a problem for keeping a check on money Laundering activities.
+### The AML/KYC Challenge
+**AML (Anti-Money Laundering)** refers to the global legal frameworks designed to prevent criminals from disguising illegal income as legitimate wealth. As global financial transactions have become entirely digitized and increasingly complex, traditional AML procedures are failing to keep pace. The regulatory penalties for non-compliance are severe, driving annual AML compliance costs for North American financial institutions to over **$31.5 billion USD**.
 
-KYC is a component of AML; they are the certain details that the business keeps as an end criteria for the identification of customers who are interested in doing business with them. Some predominant issues that are being faced by the current KYC compliances include issues related to corruption, terrorist financing, identity thefts and illegal tax avoidance.
-
-According to The LexisNexis® Risk Solutions 2019 True Cost of AML Compliance Study for the United States and Canada, the annual AML compliance costs for the United States and Canadian financial institutions totaled $31.5 billion USD
+**KYC (Know Your Customer)** is the critical first-step and ongoing identification component of AML. Current centralized KYC processes suffer from severe structural flaws:
+1.  **Inefficiency & Customer Friction:** Customers are subjected to repetitive, manual verification processes every time they open a new account with a different institution. There is no shared standard.
+2.  **Honeypot Vulnerability:** Centralized databases containing massive amounts of highly sensitive personal data (passports, SSNs, financial histories) are prime targets for large-scale data breaches, leading to mass identity theft.
+3.  **Lack of User Autonomy:** Individuals have zero visibility over how their data is shared, stored, or protected once they hand it over to a centralized entity.
 
 ## How Can Blockchain Help? 
 
-Blockchain technology allows for the creation of a distributed ledger that is then shared to all users on the network. Utilizing Blockchain as a distributed ledger system has the potential to unlock the advantages of automated processes such as reducing compliance errors. A blockchain-based registry would not only remove the repetitive efforts of implementing KYC checks, but the ledger would also enable encrypted updates to client accounts to be distributed in near real-time. 
+Blockchain technology provides a paradigm shift from siloed, centralized databases to a **distributed, immutable ledger** shared across a network. It solves the KYC trilemma (security, speed, cost) through several key mechanisms:
 
-A KYC utility system based on blockchain technology will enable the financial and banking sectors to emancipate the process of identity verification. Currently, our data is collected and stored in a centralized system, such as a repository. With the introduction of blockchain solutions to handle the KYC process, data will be available on a decentralized network and can, therefore, be accessed by third parties directly after permission has been given.
+*   **The Single Source of Truth:** Instead of 10 banks verifying the same person 10 different times, a user's identity is verified once and permanently anchored to their digital wallet on the blockchain. If Bank A verifies a customer, Bank B can trust that verification by querying the ledger.
+*   **Decentralized Data Anchoring:** Storing heavy files (like PDF passports) directly on a blockchain is prohibitively expensive and slow. Blockchain helps by keeping the *heavy data* off-chain (on secure distributed networks like IPFS) while storing a lightweight, mathematically verifiable cryptographic hash (the "pointer") *on-chain*. 
+*   **Immutability for Auditors:** Once written to the blockchain, data cannot be tampered with, backdated, or scrubbed. This provides a perfect, unforgeable "Audit Trail" for regulatory investigators tracking criminal networks.
+*   **Granular Consent:** Data is natively encrypted and only accessible by third parties when the user explicitly grants permission using their wallet's private keys.
 
-This blockchain-based KYC system will also offer better data security by ensuring that data access is only made after a confirmation or permission is received from the relevant authority. This will eliminate the chance of unauthorized access and subsequently give individuals greater control over their data.
+## Project Architecture
 
-This ledger will provide a historical record of all documents shared and compliance activities undertaken for each client. Blockchain technology is also helpful in identifying entities attempting to create fraudulent histories. Within the provisions of data protection regulation, the data in the blockchain is immutable and could be analysed to identify irregularities - this can directly target criminal activity.
+The system is organized into three distinct layers, creating a full-stack decentralized application (dApp). This architecture ensures that computational logic and user experience remain fast, while the core records remain incredibly secure.
 
-![Blockchain method](Images/Blockchain_KYC.jpg)
+```mermaid
+graph TD
+    classDef frontend fill:#3E6F80,stroke:#fff,stroke-width:2px,color:#fff;
+    classDef backend fill:#16a085,stroke:#fff,stroke-width:2px,color:#fff;
+    classDef storage fill:#2980b9,stroke:#fff,stroke-width:2px,color:#fff;
+    classDef blockchain fill:#8e44ad,stroke:#fff,stroke-width:2px,color:#fff;
 
-*Source: https://www.devteam.space/blog/why-is-blockchain-a-good-solution-for-kyc-verification/*
+    UI[React Frontend UI]:::frontend
+    API[Python Flask Backend]:::backend
+    IPFS((Pinata IPFS)):::storage
+    EVM[(Ethereum Smart Contract)]:::blockchain
 
+    UI -->|1. Submit Form Data & Image| API
+    API -->|2. Pin JSON & Image to IPFS| IPFS
+    IPFS -->|3. Returns IPFS Content Hash| API
+    API -->|4. Sign Tx with IPFS Hash| EVM
 
-## Building the KYC System
+    subgraph Smart Contract Logic
+        EVM --> R[registerKYC]
+        EVM --> U[updateKYC]
+        EVM --> C[checkvalidity]
+    end
+```
 
-The KYC System is built using a command line interface that will upload and pin KYC reports to IPFS via Pinata, permanently storing them on-chain by using the register KYC function in the KYC smart contract. The cost of gas for creating the KYC report will be borne by the client.
+### 1. Smart Contract Layer (`kyccontract.sol`)
+The core trust and logic layer of the system, written in Solidity and deployed to the Ethereum Virtual Machine (EVM).
 
-1. A Smart contract  `kyccontract.sol` is created with the `msg.sender` as contract administrator. Using a struct, we created a `client` object which is stored in a mapping called `clientdatabase`. Each client is mapped to an address called `userID`.
+*   **Data Structure (`Clientdatabase`):** Uses a `Client` struct to map Ethereum wallet addresses (`userID`) to their respective `report_uri` (the IPFS hash linking to their data). It tracks whether a wallet has been `used` (registered) and calculates an `end_date` for expiry.
+*   **`registerKYC` Protocol:** This function is the entry point. It receives a new IPFS hash and permanently binds it to the sender's wallet address. It includes a critical `require(!Clientdatabase[userID].used)` check, which serves as a vital AML control by preventing malicious actors from registering multiple dummy identities under a single wallet address.
+*   **`updateKYC` Protocol:** KYC data is not static; incomes change, and documents expire. This function allows existing users to override their "current" IPFS pointer with a new one. Crucially, because blockchains preserve historical state, updating a record does not erase the old data. Auditors can still traverse previous blocks to view the history of an identity, preventing criminals from "scrubbing" their past.
+*   **`checkvalidity` Protocol:** A read-only deterministic check that compares the current block timestamp against the user's stored `end_date`. In our demonstration environment, reports expire in 5 minutes (for testing), but in production, this enforces an automated annual compliance review (365 days).
+*   **`clientLoop` Auditing:** An administrative tool reserved solely for the deploying admin (`msg.sender`). It iterates over the registered user array and flags any identities expiring within 30 days, allowing institutions to preemptively request updated documents.
 
-    The following functions make up the contract:
+### 2. Backend API Layer (`KYC_frontend`)
+A Python Flask application that provides a RESTful API bridging the end-user and the complex blockchain networking.
 
-    * `registerKYC`: used to upload customer information into the `kyc` contract with `userID` as the address and `report_uri` that has all the details of the customer account. Simultaneously, the client is added to a list that is used to track KYC expiry dates. A check for duplicate records is also part of this function.
+*   **File Handling (`app.py`):** Exposes endpoints (`/api/register`, `/api/update`, `/api/checkvalidity`). Unlike simple text applications, this handles `multipart/form-data`, processing both text data and binary image files simultaneously.
+*   **IPFS Interoperability (`kyc.py`):** Communicates with the Pinata API. It first pins the user's ID photo to the interplanetary file system, receives the image hash, embeds that hash into a structured JSON manifest containing the user's AML profile, and finally pins that JSON file as well.
+*   **Web3 Transactions (`kycreport.py`):** Uses **Web3.py** to construct, sign, and broadcast transactions to the Ganache local blockchain, absorbing the complexity of gas calculation and receipt waiting.
 
-    * `updateKYC`: used to update any changes to an existing client record by adding a new `report_uri` that has the updated information.
+### 3. Frontend Web Interface (`form-react`)
+A modern React application built to provide a seamless, Web2-like experience for a Web3 system.
 
-    * `checkvalidity`: used to track validity of a customer report.The KYC report for customers is valid for upto `365 days`. 
+*   **Stateful Tabbed Navigation:** Users can toggle smoothly between registering a new identity, updating an existing one, or checking their status, all without reloading the decentralized application context.
+*   **Comprehensive AML Inputs:** Collects essential profiling data explicitly requested by banks: **Nationality, Occupation, and Annual Income**.
+*   **Visual Status Indicators:** The validity checker translates blockchain timestamps into intuitive UI cards (Green for Valid, Red for Expired, Orange for Unregistered).
 
-    * `clientLoop`: used to iterate over the list of clients and pull out reports that are about to expire in the next 30 days. A log is generated for the administrator i.e. the msg.sender to follow-up with customers to update their KYC information.
-        
-2. This contract is deployed in Remix IDE. 
-
-3. A new `KYC_frontend` directory is created where a `.env` file is stored with Pinata API Key and Secret API Key, address of the deployed smart contract and the WEB3 provider uri.
-
-4. The deployed `kyccontract.sol` contract ABI is copied and stored in a `kyc.json` file.
-
-5. A Python file `kyc.py` is created. In this file:
-
-   * Import web3.auto, load the environment variables using dotenv, and import the Path library from pathlib to fetch our ABI.
-
-   * A headers object to populate the variables defined in .env.
-
-   * An initContract function, that will need to return the web3 contract object that will allow it to interact with the kyc contract on-chain.
-
-   * A convertDataToJSON function, to convert customer data to json format.
-   
-   * A pinJSONtoIPFS function, with a POST request to the pinJSONtoIPFS endpoint on Pinata. 
-
-6. Another file called `kycreport.py` is created. In this file:
-
-    * Import the kyc.py functions into this file.
-
-    * A `kyccontract` object is created using the initContract function from `kyc.py`.
-
-    * In the `createkycReport` function, user data is fetched by using the input function in Python. 
-
-    * Pass the user data variables to the convertDataToJSON function. Store the result in json_data, then pass json_data to the pinJSONtoIPFS function and save that as report_uri. Return the user_id, email and report_uri variables.
-
-    * In the `kycreport` function, we will generate the transaction that talks to the kyc smart contract and returns the transaction receipt. 
-
-    * Another function called `kycupdate` will talk to the update function in the kyc smart contract to update records and return the transaction receipt.
-
-    * A `main` function we will is put the pieces together. In the `report` flow will create the kyc report then, store the receipt, and pretty print the results after. A similar `update` flow will create a report with the updated information and print the receipt.
-    
 ## Launching the KYC System
 
-1. Create a pinata account and get your pinata API keys [pinata website](https://pinata.cloud).
-​
-2. Create an ethereum environment using Anaconda prompt.
-​
-3. Go to the repository where `kyc.py` and `kycreport` files are stored.
-​
-4. Deploy the kyccontract.sol in Remix IDE.
-​
-5. Inside the KYC_frontend folder, create a .env file and copy the Pinata API Key and Secret API Key, address of the deployed smart contract and the WEB3 provider uri.
+### Prerequisites
+*   **Ganache:** A local blockchain environment.
+*   **Pinata Account:** Used for IPFS pinning services.
+*   **MetaMask:** For managing Ethereum accounts (Optional for browser connection, but Ganache handles backend deployment).
 
-6. Use the command line interface to create your records, using the following steps:
-​
-* Launch your ethereum environment​
+### Setup Instructions
+1.  **Contract Deployment:**
+    *   Open `kyccontract.sol` in [Remix IDE](https://remix.ethereum.org/).
+    *   Compile the contract.
+    *   Deploy using `Custom - External Http Provider` set to your Ganache node (e.g., `http://127.0.0.1:7545`).
+    *   Copy the newly deployed **Contract Address**.
 
-![Ethereum Environment](Images/ethereum_environment.PNG)
-​
-* cd into the `KYC_frontend` directory
-​​
-*  Run the following commands:
+2.  **Environment Configuration:**
+    *   Inside the `KYC_frontend` directory, open `.env`.
+    *   Enter your `PINATA_API_KEY`, `PINATA_SECRET_API_KEY`, and paste the new `KYC_ADDRESS`.
 
-* `python kycreport.py report` (to create a new report) 
-     
-* `python kycreport.py update` (to update a record) 
+3.  **Boot the Services:**
+    *   **Backend:** 
+        ```bash
+        cd KYC_frontend
+        python app.py
+        ```
+    *   **Frontend:** 
+        ```bash
+        cd form-react
+        npm start
+        ```
+    *   Open `http://localhost:3000` to interact with the system.
 
-![Commands in CLI](Images/initial_command.PNG)
-​
-* Complete the prompts to create your KYC report and register the client.
-*  This should return an IPFS hash of the reprt uri and a transaction receipt.
+## Handling Money Laundering (AML) Scenarios
 
-​
-![hash](Images/command_line_input.PNG)
-​
-* Using the hash, you can view the KYC report uploaded to IPFS.
+This application moves beyond basic identity storage by structurally collecting data designed to catch money laundering typologies:
 
-​
-![Report uri](Images/kyc_report.PNG)
-​
-* Verify that the client record exists in Remix.
+*   **Profile vs. Activity Mismatch Analytics:** By mandating **Annual Income** and **Occupation** data, institutions can establish a baseline "Source of Wealth." If a "$0 Income Student" wallet receives a $500,000 transaction, the disparity flags immediately in modern Transaction Monitoring Systems (TMS).
+*   **Biometric Correlation:** The required ID photo upload, stored immutably on IPFS, ensures human auditors can visually correlate the digitized identity with real-world, government-issued documents, severely crippling "shell account" creation.
+*   **Automated Sunset Clauses:** The hardcoded expiry mechanisms ensure that identities cannot lie dormant for years undetected—a common tactic for layering illicit funds.
 
-​
-![Remix record](Images/remix_client_record.PNG)
+## Technologies Used
 
-## Technologies used
+*   **Solidity:** Turing-complete smart contract logic.
+*   **React:** Frontend component architecture and state management.
+*   **Python/Flask:** Backend API services.
+*   **Web3.py:** Ethereum protocol interaction library.
+*   **Pinata / IPFS:** Secure, content-addressed decentralized storage.
+*   **Ganache:** Local blockchain development network.
 
-- Solidity
+## Limitations & Future Scope
 
-- Remix IDE
-
-- Python
-
-- Ganache
-
-- Metamask
-
-- Pinata API
-
-## Limitations
-
-1. The `clientLoop` function is stored on the chain and therefore uses gas everytime the administrator needs to pull up a list of expiring reports. This will prove to be very costly as the database increases. Depending on the expected number of users, it may be more gas efficient to use a mapping to manage this function. However, if the database is not expected to be large, then the loop would still make better sense than the mapping as mapping will require more computational power.
-
-2. The `checkvalidity` function does not work well on the test environment. Unlike main net, where there is constant activity and transactions occuring in real time, on the test net time is static. It only records time when a transaction is written to the chain. This creates a challenge when we try to use a function that requires us to calculate elapsed time. The code in the contract should work on a live network.
-
-3. The date format for the end date for each report is stored as a timestamp on the blockchain. If given more time, we could write a  function to convert this into human readable form.
-
-## Conclusion
-
-In the future, blockchain-based KYC utilities will help bring cost savings to any industry that relies on identity verification. This is because the technology will allow banks and other financial organizations to rely on a more secure organized unified model of data handling.
+1.  **Gas Optimization at Scale:** The `clientLoop` function uses an array iteration (`for` loop) to check for expiring contracts. While fine for a few hundred users, this constitutes an anti-pattern in Solidity as the gas cost grows linearly. Future iterations would move bulk querying off-chain using indexing protocols like **The Graph**.
+2.  **AI Verification Integration:** The system currently relies on manual review of the uploaded IPFS images. Future updates could implement decentralized Oracle services (like Chainlink) to pass the image to an AI model for automated facial-recognition mapping against government databases.
+3.  **Role-Based Access Control (RBAC):** Implementing an "Admin Dashboard" where centralized regulatory bodies can manually review uploaded IPFS documents and execute a `verifyKYC` transaction, transitioning a user's status from `Pending` to `Verified`.
 
 ## Sources
 
-1. https://risk.lexisnexis.com/insights-resources/research/2019-true-cost-of-aml-compliance-study-for-united-states-and-canada
-
-2. https://www2.deloitte.com/content/dam/Deloitte/ch/Documents/innovation/ch-en-innovation-deloitte-blockchain-app-in-banking.pdf
+1.  https://risk.lexisnexis.com/insights-resources/research/2019-true-cost-of-aml-compliance-study-for-united-states-and-canada
+2.  https://www2.deloitte.com/content/dam/Deloitte/ch/Documents/innovation/ch-en-innovation-deloitte-blockchain-app-in-banking.pdf
 
 
  
